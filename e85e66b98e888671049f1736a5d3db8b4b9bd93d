@@ -1,0 +1,45 @@
+extensions/k3d-gpu/README.md
+  470da1ed672962f7 482
+extensions/k3d-gpu/scripts/delete-gpu-cluster.sh
+  470da1ed672962f7 2-17
+tests/k3d-gpu/test-load.sh
+  470da1ed672962f7 2-17
+tests/k3d-gpu/test-config-validation.sh
+  470da1ed672962f7 2-17
+extensions/k3d-gpu/test.sh
+  470da1ed672962f7 2-17
+extensions/k3d-gpu/extension.star
+  470da1ed672962f7 1-16
+extensions/k3d-gpu/scripts/create-gpu-cluster.sh
+  470da1ed672962f7 2-17
+extensions/k3d-gpu/assets/k3s-wrapper.sh
+  470da1ed672962f7 2-17
+README.md
+  470da1ed672962f7 1-104
+extensions/k3d-gpu/assets/cluster/k3s-wrapper.sh
+  470da1ed672962f7 2-17
+LICENSE
+  470da1ed672962f7 1-190
+tests/k3d-gpu/test-output-validation.sh
+  470da1ed672962f7 2-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.3",
+  "base_commit_sha": "e85e66b98e888671049f1736a5d3db8b4b9bd93d",
+  "prompts": {
+    "470da1ed672962f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80ca0cb3-bda4-4a56-be95-25358cdb8d78",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 440,
+      "overriden_lines": 0
+    }
+  }
+}
