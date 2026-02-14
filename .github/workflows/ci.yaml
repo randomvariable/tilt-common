@@ -14,18 +14,15 @@ permissions:
   contents: read
 
 jobs:
-  k3d-gpu:
-    name: k3d-gpu extension
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: extensions/k3d-gpu/magefiles
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: extensions/k3d-gpu/magefiles/go.mod
+          go-version-file: go.mod
 
       - name: Download dependencies
         run: go mod download
@@ -40,15 +37,14 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: extensions/k3d-gpu/magefiles/go.mod
+          go-version-file: go.mod
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          working-directory: extensions/k3d-gpu/magefiles
-          args: --config ../../.golangci.yml
+          install-mode: goinstall

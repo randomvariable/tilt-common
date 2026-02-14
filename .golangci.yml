@@ -34,7 +34,7 @@ formatters:
         - standard
         - dot
         - default
-        - prefix(github.com/randomvariable/memex)
+        - prefix(github.com/randomvariable/tilt-common)
     golines:
       max-len: 180
 issues:
@@ -193,9 +193,6 @@ linters:
           disabled: true
         - name: comment-spacings
           disabled: true
-    wrapcheck:
-      ignore-package-globs:
-        - go.temporal.io/sdk/*
     testifylint:
       enable-all: true
     varnamelen:

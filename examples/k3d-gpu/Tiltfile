@@ -1,0 +1,14 @@
+# Basic k3d GPU Extension Example
+# This is the simplest possible usage - zero configuration required
+
+# Load the k3d-gpu extension
+load('ext://tilt-common/k3d-gpu', 'enable_gpu_support')
+
+# Enable GPU support with all defaults
+enable_gpu_support()
+
+# Deploy GPU test pod
+k8s_yaml('test-gpu-pod.yaml')
+
+# Organize resources
+k8s_resource('gpu-test', labels=['test'])
