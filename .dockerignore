@@ -1,0 +1,63 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+docs/
+examples/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+*.log.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
+
+# Secrets
+.env
+.env.*
+*.secret.yaml
+secrets/
+*.key
+*.crt
+*.pem
+
+# Testing
+coverage/
+.coverage
+*.cover
+
+# Specs and planning
+specs/
+
+# Ignore Dockerfile itself
+Dockerfile*
+.dockerignore

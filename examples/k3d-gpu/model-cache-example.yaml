@@ -1,0 +1,171 @@
+# Example: Using the model cache volume in Kubernetes pods
+#
+# Prerequisites:
+# 1. Cluster created with model cache mount:
+#    mage setupGPUClusterWithModelCache
+#    OR
+#    k3dgpu.CreateCluster with ModelCacheMount volume
+#
+# 2. The k3d volume mount makes ~/.cache/models available at /var/lib/models
+#    inside the k3d node
+#
+# 3. Pods use hostPath to access /var/lib/models from the node
+#
+# This pattern ensures models persist across cluster recreations and are
+# shared between pods.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-inference
+  labels:
+    app: llm-inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-inference
+  template:
+    metadata:
+      labels:
+        app: llm-inference
+    spec:
+      runtimeClassName: nvidia  # Required for GPU access
+
+      # Optional: Download model if not present
+      initContainers:
+        - name: model-download
+          image: alpine:3.21
+          command:
+            - sh
+            - -c
+            - |
+              MODEL_PATH="/models/my-model.gguf"
+              if [ -f "$MODEL_PATH" ]; then
+                echo "Model already downloaded, skipping"
+                exit 0
+              fi
+              apk add --no-cache curl
+              echo "Downloading model..."
+              curl -fSL -o "$MODEL_PATH.tmp" \
+                "https://huggingface.co/org/repo/resolve/main/model.gguf"
+              mv "$MODEL_PATH.tmp" "$MODEL_PATH"
+              echo "Download complete"
+          volumeMounts:
+            - name: models
+              mountPath: /models
+
+      containers:
+        - name: llm-server
+          image: ghcr.io/ggml-org/llama.cpp:server-cuda
+          args:
+            - --model
+            - /models/my-model.gguf
+            - --port
+            - "8080"
+            - --host
+            - "0.0.0.0"
+            - --n-gpu-layers
+            - "999"  # Offload all layers to GPU
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              nvidia.com/gpu: "1"
+            limits:
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true  # Models are read-only at runtime
+
+      volumes:
+        - name: models
+          hostPath:
+            # This path is inside the k3d node, mapped from host via k3d volume mount
+            path: /var/lib/models
+            type: DirectoryOrCreate
+
+---
+# Example: HuggingFace Transformers with model cache
+apiVersion: v1
+kind: Pod
+metadata:
+  name: huggingface-inference
+spec:
+  runtimeClassName: nvidia
+  containers:
+    - name: transformers
+      image: huggingface/transformers-pytorch-gpu:latest
+      command:
+        - python3
+        - -c
+        - |
+          from transformers import pipeline
+          # Models will be cached in /models instead of default ~/.cache
+          import os
+          os.environ['TRANSFORMERS_CACHE'] = '/models/transformers'
+          os.environ['HF_HOME'] = '/models/huggingface'
+
+          classifier = pipeline('sentiment-analysis', device=0)
+          result = classifier('I love GPU acceleration!')
+          print(result)
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+        limits:
+          nvidia.com/gpu: "1"
+      volumeMounts:
+        - name: models
+          mountPath: /models
+  volumes:
+    - name: models
+      hostPath:
+        path: /var/lib/models
+        type: DirectoryOrCreate
+
+---
+# Example: Multiple pods sharing the same model cache
+# This demonstrates GPU timesharing - 4 pods sharing 1 GPU
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embedding-service
+spec:
+  replicas: 4  # 4 replicas sharing models and GPU (with timesharing)
+  selector:
+    matchLabels:
+      app: embedding-service
+  template:
+    metadata:
+      labels:
+        app: embedding-service
+    spec:
+      runtimeClassName: nvidia
+      containers:
+        - name: nomic-embed
+          image: ghcr.io/ggml-org/llama.cpp:server-cuda
+          args:
+            - --model
+            - /models/nomic-embed-text-v1.5.Q8_0.gguf
+            - --embedding
+            - --port
+            - "8081"
+          ports:
+            - containerPort: 8081
+          resources:
+            requests:
+              nvidia.com/gpu: "1"  # Each pod requests 1 GPU (gets 1/4 with timesharing)
+            limits:
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+      volumes:
+        - name: models
+          hostPath:
+            path: /var/lib/models
+            type: DirectoryOrCreate

@@ -1,0 +1,55 @@
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Logs and Temporary Files
+*.log
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+*.secret
+secrets/
+*.key
+*.pem
+*.crt
+
+# Tilt and Kubernetes
+.tilt-build/
+tilt_modules/
+*.kubeconfig
+kubeconfig*
+
+# Test Output
+*.test
+test-results/
+coverage/
+
+# Build Artifacts (if any)
+dist/
+build/
+out/

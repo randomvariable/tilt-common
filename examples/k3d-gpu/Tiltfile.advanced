@@ -1,0 +1,101 @@
+# Advanced k3d GPU Extension Example
+# Demonstrates custom configuration and multiple GPU workloads with timesharing
+
+# Load the k3d-gpu extension
+load('ext://tilt-common/k3d-gpu', 'enable_gpu_support')
+
+# Enable GPU support with custom configuration
+enable_gpu_support({
+    'cluster_name': 'k3d-dev',
+    'namespace': 'gpu-system',  # Deploy device plugin to custom namespace
+    'device_plugin_image': 'nvcr.io/nvidia/k8s-device-plugin:v0.14.3',
+    'timesharing_replicas': 4,  # Allow 4 pods to share each physical GPU
+    'enable_profiling': True,   # Mount debugfs/tracefs for parca profiling
+    'skip_dns_fix': False,      # Apply DNS fix for Docker 29+
+    'skip_validation': False,   # Validate prerequisites
+})
+
+# Deploy multiple GPU workloads to demonstrate timesharing
+# With timesharing_replicas=4, all 4 pods can share a single physical GPU
+
+# Workload 1: ML Inference Server
+k8s_yaml(blob("""
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ml-inference-1
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+  - name: inference
+    image: nvidia/cuda:12.0.0-base-ubuntu22.04
+    command: ["sh", "-c", "echo 'ML Inference 1 starting...'; nvidia-smi; sleep 3600"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+"""))
+
+# Workload 2: ML Inference Server (another instance)
+k8s_yaml(blob("""
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ml-inference-2
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+  - name: inference
+    image: nvidia/cuda:12.0.0-base-ubuntu22.04
+    command: ["sh", "-c", "echo 'ML Inference 2 starting...'; nvidia-smi; sleep 3600"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+"""))
+
+# Workload 3: Embedding Generation
+k8s_yaml(blob("""
+apiVersion: v1
+kind: Pod
+metadata:
+  name: embedding-gen
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+  - name: embeddings
+    image: nvidia/cuda:12.0.0-base-ubuntu22.04
+    command: ["sh", "-c", "echo 'Embedding generation starting...'; nvidia-smi; sleep 3600"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+"""))
+
+# Workload 4: Video Processing
+k8s_yaml(blob("""
+apiVersion: v1
+kind: Pod
+metadata:
+  name: video-processing
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+  - name: video
+    image: nvidia/cuda:12.0.0-base-ubuntu22.04
+    command: ["sh", "-c", "echo 'Video processing starting...'; nvidia-smi; sleep 3600"]
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+"""))
+
+# Organize resources by label
+k8s_resource('ml-inference-1', labels=['gpu-workloads'])
+k8s_resource('ml-inference-2', labels=['gpu-workloads'])
+k8s_resource('embedding-gen', labels=['gpu-workloads'])
+k8s_resource('video-processing', labels=['gpu-workloads'])
+
+# Note: With timesharing enabled (replicas=4), all 4 pods can run simultaneously
+# on a single physical GPU. Without timesharing, only 1 pod would schedule and
+# the other 3 would remain pending.
