@@ -1,0 +1,23 @@
+magefile.go
+  f740fcd77450e039 265-293
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.3",
+  "base_commit_sha": "65776aefeb4527c41bc3ebc525df37c0be7ac022",
+  "prompts": {
+    "f740fcd77450e039": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "96c7259c-e696-4f3d-acfa-dc820f5868c2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 34,
+      "total_deletions": 5,
+      "accepted_lines": 29,
+      "overriden_lines": 0
+    }
+  }
+}
