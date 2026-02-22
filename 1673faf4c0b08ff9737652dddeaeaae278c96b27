@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.4",
+  "base_commit_sha": "1673faf4c0b08ff9737652dddeaeaae278c96b27",
+  "prompts": {
+    "9d84833e37ce244b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef734e75-0940-4857-b0fb-5a65ad3cb9b0",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 382,
+      "overriden_lines": 0
+    }
+  }
+}
