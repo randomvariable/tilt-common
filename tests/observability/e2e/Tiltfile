@@ -1,0 +1,32 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+
+# E2E Test Tiltfile: Full observability stack with all components.
+# Used by the Go E2E test suite (e2e_ginkgo_test.go) via `tilt ci`.
+
+allow_k8s_contexts('kind-tilt-dev')
+
+# Use the k3d-created local registry for built images.
+default_registry('localhost:5005')
+
+# Load the observability extension from the local source tree
+load('../../../extensions/observability/extension.star', 'enable_observability')
+
+# Enable full stack with NEW flat flags architecture
+enable_observability({
+    'namespace': 'observability',
+    'metrics': True,
+    'logs': True,
+    'traces': True,
+    'prometheus_metrics': True,
+    'otel': True,
+    'profiling': True,
+    'parca_agent': False,  # Parca Agent requires real Linux eBPF; not supported on kind.
+    'ports': {
+        'grafana': 3000,
+        'metrics': 8428,
+        'logs': 9428,
+        'traces': 10428,
+        'parca': 7070,
+    },
+})

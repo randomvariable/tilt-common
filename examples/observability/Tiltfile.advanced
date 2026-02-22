@@ -1,0 +1,136 @@
+# Advanced Observability Stack Example
+#
+# Demonstrates every configuration option available in the observability
+# extension. Copy this file and adjust to your needs.
+
+# Load the extension's public API:
+#   enable_observability - deploys the observability backends into the cluster
+#   otel_env            - returns OTEL_* env vars for application containers
+#   export_telemetry    - registers a manual Tilt button to export telemetry data
+load('ext://tilt-common/observability', 'enable_observability', 'otel_env', 'export_telemetry')
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+config = {
+    # -- Namespace --
+    # All observability resources are deployed into this namespace.
+    # Override at runtime with the TILT_OBSERVABILITY_NAMESPACE env var.
+    "namespace": "monitoring",
+
+    # -- Components --
+    # Toggle individual backends on or off. Defaults shown in comments.
+    "components": {
+        "metrics": True,      # VictoriaMetrics  (default: True)
+        "logs": True,         # VictoriaLogs     (default: True)
+        "traces": True,       # VictoriaTraces   (default: True)
+        "grafana": True,      # Grafana          (default: True)
+        "vmagent": True,      # VMAgent          (default: False) -- requires metrics
+        "profiling": True,    # Parca            (default: False) -- standalone
+        # "otel_operator": True,  # OTel Operator (default: False) -- webhook injection
+    },
+
+    # -- Host port forwards --
+    # Map backend container ports to localhost. Override individual ports
+    # at runtime with TILT_OBSERVABILITY_PORT_<KEY> env vars.
+    "ports": {
+        "metrics": 8428,   # VictoriaMetrics  (default: 8428)
+        "logs":    9428,   # VictoriaLogs     (default: 9428)
+        "traces":  10428,  # VictoriaTraces   (default: 10428)
+        "grafana": 3001,   # Grafana          (default: 3000) -- 3001 avoids conflicts
+        "parca":   7070,   # Parca            (default: 7070)
+    },
+
+    # -- Container image overrides --
+    # Pin specific versions instead of using :latest.
+    # "images": {
+    #     "metrics":      "victoriametrics/victoria-metrics:v1.106.1",
+    #     "logs":         "victoriametrics/victoria-logs:v1.15.0",
+    #     "traces":       "victoriametrics/victoria-traces:v1.6.0",
+    #     "grafana":      "grafana/grafana:11.4.0",
+    #     "parca_server": "ghcr.io/parca-dev/parca:v0.25.0",
+    #     "parca_agent":  "ghcr.io/parca-dev/parca-agent:v0.25.0",
+    #     "vmagent":      "victoriametrics/vmagent:v1.106.1",
+    # },
+
+    # -- VMAgent scrape targets --
+    # Static endpoints for VMAgent to scrape. Each entry is a host:port string.
+    # VMAgent will hit the /metrics path on each target by default.
+    "scrape_targets": [
+        "my-app.default.svc:8080",
+        "another-service.default.svc:9090",
+    ],
+
+    # -- Grafana dashboards --
+    # Paths to dashboard JSON files that are provisioned automatically.
+    # Files are loaded into a "Custom" folder in Grafana.
+    "dashboard_paths": [
+        "./dashboards/app-overview.json",
+        "./dashboards/slo-tracking.json",
+    ],
+
+    # -- Export directory --
+    # Where the export CLI writes metrics snapshots, trace dumps, and pprof
+    # profiles. Override at runtime with TILT_OBSERVABILITY_EXPORT_DIR env var.
+    "export_dir": "./observability-export",
+}
+
+# ---------------------------------------------------------------------------
+# Deploy the stack
+# ---------------------------------------------------------------------------
+
+# This single call deploys all enabled components, wires up Grafana datasources,
+# provisions dashboards, configures VMAgent scrape jobs, and sets up Parca
+# profiling with automatic containerd socket detection.
+enable_observability(config)
+
+# ---------------------------------------------------------------------------
+# Export button
+# ---------------------------------------------------------------------------
+
+# Registers a manually-triggered Tilt resource called "observability-export".
+# Click the button in the Tilt UI to snapshot metrics, traces, and profiles
+# to the export_dir. The resource does not run automatically.
+export_telemetry(config)
+
+# ---------------------------------------------------------------------------
+# Wiring OpenTelemetry into your application
+# ---------------------------------------------------------------------------
+
+# otel_env() returns a list of OTEL_EXPORTER_OTLP_* environment variables
+# that point your application at the in-cluster backends. It only includes
+# variables for enabled components (metrics, logs, traces).
+#
+# The first argument is the service name (OTEL_SERVICE_NAME), and the second
+# is the same config dict so it knows which backends are active and what
+# namespace they live in.
+
+# Example: a hypothetical Go application instrumented with the OTel SDK.
+#
+# docker_build(
+#     'my-app-image',
+#     context='.',
+#     dockerfile='Dockerfile',
+# )
+#
+# k8s_yaml('deploy/my-app.yaml')
+#
+# k8s_resource(
+#     'my-app',
+#     # Inject the OTEL environment variables so the app sends telemetry
+#     # to the observability stack.
+#     env=otel_env(service_name="my-app", config=config),
+#     # Wait for backends to be healthy before starting the app.
+#     resource_deps=['victoriametrics', 'victorialogs', 'victoriatraces'],
+#     labels=['app'],
+# )
+#
+# The env list produced by otel_env() looks like:
+#   OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://victoriametrics.monitoring.svc.cluster.local:8428/opentelemetry/api/v1/push
+#   OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
+#   OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://victorialogs.monitoring.svc.cluster.local:9428/insert/opentelemetry/v1/logs
+#   OTEL_EXPORTER_OTLP_LOGS_PROTOCOL=http/protobuf
+#   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://victoriatraces.monitoring.svc.cluster.local:4317
+#   OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
+#   OTEL_SERVICE_NAME=my-app

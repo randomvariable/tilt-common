@@ -1,0 +1,125 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# VMAgent deployment for local development.
+# Scrapes Prometheus-compatible targets and forwards metrics via remote write.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vmagent
+  namespace: __NAMESPACE__
+  labels:
+    app: vmagent
+    app.kubernetes.io/managed-by: tilt-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tilt-observability-vmagent
+  labels:
+    app: vmagent
+    app.kubernetes.io/managed-by: tilt-observability
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - pods
+      - services
+      - endpoints
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tilt-observability-vmagent
+  labels:
+    app: vmagent
+    app.kubernetes.io/managed-by: tilt-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tilt-observability-vmagent
+subjects:
+  - kind: ServiceAccount
+    name: vmagent
+    namespace: __NAMESPACE__
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vmagent
+  namespace: __NAMESPACE__
+  labels:
+    app: vmagent
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vmagent
+  template:
+    metadata:
+      labels:
+        app: vmagent
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      serviceAccountName: vmagent
+      containers:
+        - name: vmagent
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-remoteWrite.url=http://__METRICS_SERVICE__:8428/api/v1/write"
+            - "-promscrape.config=/etc/vmagent/scrape.yaml"
+          ports:
+            - name: http
+              containerPort: 8429
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 8429
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 8429
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          volumeMounts:
+            - name: scrape-config
+              mountPath: /etc/vmagent/
+              readOnly: true
+      volumes:
+        - name: scrape-config
+          configMap:
+            name: vmagent-scrape-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmagent
+  namespace: __NAMESPACE__
+  labels:
+    app: vmagent
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  selector:
+    app: vmagent
+  ports:
+    - name: http
+      port: 8429
+      targetPort: 8429
+      protocol: TCP

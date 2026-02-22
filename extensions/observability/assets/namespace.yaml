@@ -1,0 +1,15 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# Namespace for the observability stack.
+# PSA labels allow privileged workloads (required by Parca Agent for eBPF profiling).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: __NAMESPACE__
+  labels:
+    app.kubernetes.io/managed-by: tilt-observability
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged

@@ -1,0 +1,32 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# Test telemetry Pod using the OTel Go SDK. The OTel Operator webhook injects
+# OTEL_EXPORTER_OTLP_* environment variables from the Instrumentation CR,
+# configuring the SDK to send metrics and traces (OTLP HTTP/protobuf) directly
+# to the in-cluster backends.
+#
+# Container stdout is collected by Vector and shipped to VictoriaLogs.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-telemetry
+  namespace: default
+  labels:
+    app: test-telemetry
+    app.kubernetes.io/managed-by: tilt-observability
+  annotations:
+    instrumentation.opentelemetry.io/inject-sdk: "observability-auto"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: telemetry-sender
+      image: test-otel-app
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi

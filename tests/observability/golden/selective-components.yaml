@@ -1,0 +1,194 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: parca-agent
+    app.kubernetes.io/managed-by: tilt-observability
+  name: parca-agent
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: parca-agent
+  template:
+    metadata:
+      labels:
+        app: parca-agent
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      containers:
+      - args:
+        - --remote-store-address=parca-server.observability.svc.cluster.local:7070
+        - --remote-store-insecure
+        - --node=$(NODE_NAME)
+        command:
+        - /bin/parca-agent
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        image: ghcr.io/parca-dev/parca-agent:v0.25.0
+        imagePullPolicy: IfNotPresent
+        name: parca-agent
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - SYS_PTRACE
+            - IPC_LOCK
+          privileged: true
+        volumeMounts:
+        - mountPath: /proc
+          name: proc
+          readOnly: true
+        - mountPath: /sys
+          name: sys
+          readOnly: true
+        - mountPath: /sys/kernel/debug
+          name: debugfs
+        - mountPath: /sys/fs/bpf
+          name: bpffs
+        - mountPath: /run/containerd/containerd.sock
+          name: containerd-socket
+      hostPID: true
+      serviceAccountName: parca
+      volumes:
+      - hostPath:
+          path: /proc
+        name: proc
+      - hostPath:
+          path: /sys
+        name: sys
+      - hostPath:
+          path: /sys/kernel/debug
+        name: debugfs
+      - hostPath:
+          path: /sys/fs/bpf
+        name: bpffs
+      - hostPath:
+          path: /run/containerd/containerd.sock
+        name: containerd-socket
+  updateStrategy: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+  name: parca-server
+  namespace: observability
+spec:
+  ports:
+  - name: http
+    port: 7070
+    protocol: TCP
+    targetPort: 7070
+  selector:
+    app: parca-server
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+  name: parca-server
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parca-server
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: parca-server
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      containers:
+      - image: ghcr.io/parca-dev/parca:v0.25.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 7070
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        name: parca-server
+        ports:
+        - containerPort: 7070
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 7070
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      serviceAccountName: parca
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+  name: parca
+  namespace: observability
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+  name: tilt-observability-parca
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+  name: tilt-observability-parca
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tilt-observability-parca
+subjects:
+- kind: ServiceAccount
+  name: parca
+  namespace: observability

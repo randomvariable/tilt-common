@@ -24,14 +24,28 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Install tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Installing tools (attempt ${attempt}/3)..."
+            if go run mage.go tools:install; then
+              exit 0
+            fi
+            if [[ "${attempt}" -lt 3 ]]; then
+              echo "Tool install failed; retrying in 15s..."
+              sleep 15
+            fi
+          done
+          echo "Tool install failed after 3 attempts"
+          exit 1
 
       - name: Build
-        run: go build ./...
+        run: go run mage.go build:all
 
       - name: Test
-        run: go test ./... -count=1 -timeout=120s -race
+        run: go run mage.go test:unit
 
   lint:
     name: Lint
@@ -43,8 +57,22 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: latest
-          install-mode: goinstall
+      - name: Install tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Installing tools (attempt ${attempt}/3)..."
+            if go run mage.go tools:install; then
+              exit 0
+            fi
+            if [[ "${attempt}" -lt 3 ]]; then
+              echo "Tool install failed; retrying in 15s..."
+              sleep 15
+            fi
+          done
+          echo "Tool install failed after 3 attempts"
+          exit 1
+
+      - name: Lint
+        run: go run mage.go lint:all

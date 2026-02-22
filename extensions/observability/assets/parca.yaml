@@ -1,0 +1,113 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# Parca Server for local development.
+# Provides the storage backend and UI for continuous profiling data.
+# Parca Agent is deployed separately (see parca-agent.yaml).
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: parca
+  namespace: __NAMESPACE__
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tilt-observability-parca
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tilt-observability-parca
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tilt-observability-parca
+subjects:
+  - kind: ServiceAccount
+    name: parca
+    namespace: __NAMESPACE__
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parca-server
+  namespace: __NAMESPACE__
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parca-server
+  template:
+    metadata:
+      labels:
+        app: parca-server
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      serviceAccountName: parca
+      containers:
+        - name: parca-server
+          image: __PARCA_SERVER_IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 7070
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7070
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7070
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: parca-server
+  namespace: __NAMESPACE__
+  labels:
+    app: parca-server
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  selector:
+    app: parca-server
+  ports:
+    - name: http
+      port: 7070
+      targetPort: 7070
+      protocol: TCP

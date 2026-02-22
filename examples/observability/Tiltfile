@@ -1,0 +1,59 @@
+# Observability Stack Example Tiltfile
+# This demonstrates the full observability stack with all features enabled
+
+load('ext://tilt-common/observability', 'enable_observability', 'otel_env')
+
+# Allow local k8s context (update for your environment)
+allow_k8s_contexts('kind-tilt-dev')
+
+# Enable full observability stack with all features
+enable_observability({
+    'namespace': 'observability',
+    'metrics': True,           # VictoriaMetrics for metrics storage
+    'logs': True,              # VictoriaLogs + Vector for log collection
+    'traces': True,            # VictoriaTraces for distributed tracing
+    'prometheus_metrics': True,  # VMAgent for Prometheus scraping (annotations + CRDs)
+    'otel': True,              # OTel Operator for auto-injection of OTLP env vars
+    'profiling': True,         # Parca for continuous profiling
+    'ports': {
+        'grafana': 3000,
+        'metrics': 8428,
+        'logs': 9428,
+        'traces': 10428,
+        'parca': 7070,
+    },
+})
+
+# Example application with OTel instrumentation
+k8s_yaml("""
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+  namespace: observability
+  annotations:
+    instrumentation.opentelemetry.io/inject-sdk: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      containers:
+        - name: app
+          image: curlimages/curl:latest
+          command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: demo-app
+""")
+
+k8s_resource('demo-app', labels=['apps'])

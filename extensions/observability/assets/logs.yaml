@@ -1,0 +1,71 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# VictoriaLogs single-node deployment for local development.
+# Provides log aggregation with OpenTelemetry and Elasticsearch-compatible ingestion.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victorialogs
+  namespace: __NAMESPACE__
+  labels:
+    app: victorialogs
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: victorialogs
+  template:
+    metadata:
+      labels:
+        app: victorialogs
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      containers:
+        - name: victorialogs
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-retentionPeriod=1d"
+          ports:
+            - name: http
+              containerPort: 9428
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9428
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9428
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: victorialogs
+  namespace: __NAMESPACE__
+  labels:
+    app: victorialogs
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  selector:
+    app: victorialogs
+  ports:
+    - name: http
+      port: 9428
+      targetPort: 9428
+      protocol: TCP

@@ -51,6 +51,7 @@ linters:
     - tagliatelle
     - testpackage
     - wsl
+    - noinlineerr
   enable:
     - goheader
   default: all
@@ -78,6 +79,11 @@ linters:
           - gosec
           - noctx
           - mnd
+      - path: tests/tilttest/
+        linters:
+          - gosec
+          - mnd
+          - noctx
   settings:
     goheader:
       template: |-
