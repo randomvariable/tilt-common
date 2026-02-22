@@ -25,7 +25,21 @@ jobs:
           go-version-file: go.mod
 
       - name: Install tools
-        run: go run mage.go tools:ensure
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Installing tools (attempt ${attempt}/3)..."
+            if go run mage.go tools:install; then
+              exit 0
+            fi
+            if [[ "${attempt}" -lt 3 ]]; then
+              echo "Tool install failed; retrying in 15s..."
+              sleep 15
+            fi
+          done
+          echo "Tool install failed after 3 attempts"
+          exit 1
 
       - name: Build
         run: go run mage.go build:all
@@ -44,7 +58,21 @@ jobs:
           go-version-file: go.mod
 
       - name: Install tools
-        run: go run mage.go tools:ensure
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Installing tools (attempt ${attempt}/3)..."
+            if go run mage.go tools:install; then
+              exit 0
+            fi
+            if [[ "${attempt}" -lt 3 ]]; then
+              echo "Tool install failed; retrying in 15s..."
+              sleep 15
+            fi
+          done
+          echo "Tool install failed after 3 attempts"
+          exit 1
 
       - name: Lint
         run: go run mage.go lint:all

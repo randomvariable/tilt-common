@@ -54,6 +54,8 @@ type portForwardDialer struct {
 // The addr parameter is host:port from the URL; only the host is used for
 // routing — the port comes from the registered route so it matches the
 // container port regardless of what URL port was specified.
+//
+//nolint:err113 // dynamic details are needed to debug cluster routing/port-forward failures.
 func (d *portForwardDialer) DialContext(ctx context.Context, _, addr string) (net.Conn, error) {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -102,6 +104,8 @@ func (d *portForwardDialer) DialContext(ctx context.Context, _, addr string) (ne
 // the URL fields to use service names as hostnames. It loads the kubeconfig
 // from kubeconfigPath (empty string auto-detects ~/.kube/config or in-cluster
 // config). Returns a no-op cleanup function and an error if setup fails.
+//
+
 func SetupPortForward(ctx context.Context, kubeconfigPath, namespace string, opts *ExportOptions) (func(), error) {
 	cfg, err := buildKubeConfig(kubeconfigPath)
 	if err != nil {
@@ -127,22 +131,22 @@ func SetupPortForward(ctx context.Context, kubeconfigPath, namespace string, opt
 
 	if !opts.SkipMetrics {
 		dialer.routes["victoriametrics"] = portForwardRoute{"victoriametrics", 8428}
-		opts.MetricsURL = "http://victoriametrics:8428"
+		opts.MetricsURL = "http://victoriametrics:8428" //nolint:revive // internal service endpoint.
 	}
 
 	if !opts.SkipTraces {
 		dialer.routes["victoriatraces"] = portForwardRoute{"victoriatraces", 10428}
-		opts.TracesURL = "http://victoriatraces:10428"
+		opts.TracesURL = "http://victoriatraces:10428" //nolint:revive // internal service endpoint.
 	}
 
 	if !opts.SkipLogs {
 		dialer.routes["victorialogs"] = portForwardRoute{"victorialogs", 9428}
-		opts.LogsURL = "http://victorialogs:9428"
+		opts.LogsURL = "http://victorialogs:9428" //nolint:revive // internal service endpoint.
 	}
 
 	if !opts.SkipProfiles {
 		dialer.routes["parca-server"] = portForwardRoute{"parca-server", 7070}
-		opts.ParcaURL = "http://parca-server:7070"
+		opts.ParcaURL = "http://parca-server:7070" //nolint:revive // internal service endpoint.
 	}
 
 	opts.HTTPClient = &http.Client{
@@ -172,7 +176,7 @@ func buildKubeConfig(kubeconfigPath string) (*rest.Config, error) {
 		// Fall back to in-cluster config (running inside a pod).
 		inCluster, inErr := rest.InClusterConfig()
 		if inErr != nil {
-			return nil, fmt.Errorf("kubeconfig %q failed (%v); in-cluster config also failed: %w", kubeconfigPath, err, inErr)
+			return nil, fmt.Errorf("kubeconfig %q failed (%w); in-cluster config also failed: %w", kubeconfigPath, err, inErr)
 		}
 
 		return inCluster, nil

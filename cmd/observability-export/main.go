@@ -45,8 +45,10 @@ func main() {
 func run() int {
 	opts := ExportOptions{}
 
-	var kubeconfigPath, namespace string
-	var noPortForward bool
+	var (
+		kubeconfigPath, namespace string
+		noPortForward             bool
+	)
 
 	flag.StringVar(&opts.OutputDir, "output-dir", "./artifacts", "Directory to write exported data")
 	flag.StringVar(&opts.MetricsURL, "metrics-url", "http://localhost:8428", "VictoriaMetrics base URL (ignored when port-forwarding)")

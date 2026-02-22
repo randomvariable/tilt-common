@@ -1114,7 +1114,7 @@ func TestFetchProfileTypes(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	types, err := fetchProfileTypes(context.Background(), nil, srv.URL)
+	types, err := fetchProfileTypes(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("fetchProfileTypes: %v", err)
 	}
@@ -1129,13 +1129,14 @@ func TestFetchProfileTypes_RejectsHTML(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 		if _, err := fmt.Fprintln(writer, "<!doctype html><html><body>spa</body></html>"); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
 	}))
 	defer srv.Close()
 
-	_, err := fetchProfileTypes(context.Background(), nil, srv.URL)
+	_, err := fetchProfileTypes(context.Background(), srv.URL)
 	if err == nil {
 		t.Fatal("expected error for HTML response, got nil")
 	}
@@ -1148,6 +1149,7 @@ func TestFetchProfileTypes_FallbackToLegacyAPI(t *testing.T) {
 		switch request.URL.Path {
 		case parcaProfileTypesPath:
 			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 			if _, err := fmt.Fprintln(writer, "<!doctype html><html><body>spa</body></html>"); err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 			}
@@ -1169,7 +1171,7 @@ func TestFetchProfileTypes_FallbackToLegacyAPI(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	types, err := fetchProfileTypes(context.Background(), nil, srv.URL)
+	types, err := fetchProfileTypes(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("fetchProfileTypes: %v", err)
 	}
@@ -1178,6 +1180,7 @@ func TestFetchProfileTypes_FallbackToLegacyAPI(t *testing.T) {
 		t.Fatalf("got %d types, want 2", len(types))
 	}
 
+	//nolint:goconst // explicit literals make expected profile type order clear in this test.
 	if types[0] != "cpu" || types[1] != "heap" {
 		t.Fatalf("unexpected profile types: %v", types)
 	}
@@ -1190,6 +1193,7 @@ func TestFetchProfileTypes_FallbackFromGatewayToV1API(t *testing.T) {
 		switch request.URL.Path {
 		case parcaGatewayProfileTypesPath:
 			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 			if _, err := fmt.Fprintln(writer, "<!doctype html><html><body>spa</body></html>"); err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 			}
@@ -1211,7 +1215,7 @@ func TestFetchProfileTypes_FallbackFromGatewayToV1API(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	types, err := fetchProfileTypes(context.Background(), nil, srv.URL)
+	types, err := fetchProfileTypes(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("fetchProfileTypes: %v", err)
 	}
@@ -1276,6 +1280,7 @@ func grpcWebFrameForTest(frameType byte, payload []byte) []byte {
 
 func buildProfileTypesResponseProtoForTest(names ...string) []byte {
 	resp := []byte{}
+
 	for _, name := range names {
 		entry := []byte{}
 		entry = protowire.AppendTag(entry, 1, protowire.BytesType)
@@ -1337,13 +1342,14 @@ func TestFetchProfileTypes_GRPCWeb(t *testing.T) {
 
 		writer.Header().Set("Content-Type", "application/grpc-web+proto")
 		writer.WriteHeader(http.StatusOK)
+
 		if _, err := writer.Write(responseBody); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
 	}))
 	defer srv.Close()
 
-	types, err := fetchProfileTypes(context.Background(), nil, srv.URL)
+	types, err := fetchProfileTypes(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("fetchProfileTypes: %v", err)
 	}
@@ -1375,6 +1381,7 @@ func TestDownloadProfile_GRPCWeb(t *testing.T) {
 
 		writer.Header().Set("Content-Type", "application/grpc-web+proto")
 		writer.WriteHeader(http.StatusOK)
+
 		if _, err := writer.Write(responseBody); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		}
@@ -1382,6 +1389,7 @@ func TestDownloadProfile_GRPCWeb(t *testing.T) {
 	defer srv.Close()
 
 	profilesDir := t.TempDir()
+
 	err := downloadProfile(
 		context.Background(),
 		nil,

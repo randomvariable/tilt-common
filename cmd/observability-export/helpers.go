@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/marcboeker/go-duckdb"
 )
@@ -42,6 +43,8 @@ var (
 const (
 	// dirPermissions is the file mode used when creating output directories.
 	dirPermissions = 0o750
+	// defaultHTTPTimeout bounds all outbound HTTP requests when no client is injected.
+	defaultHTTPTimeout = 10 * time.Second
 
 	// API path constants.
 	metricsExportPath = "/api/v1/export"
@@ -50,17 +53,19 @@ const (
 	logsQueryPath     = "/select/logsql/query"
 )
 
-// clientOrDefault returns client if non-nil, otherwise http.DefaultClient.
+var defaultHTTPClient = &http.Client{Timeout: defaultHTTPTimeout}
+
+// clientOrDefault returns client if non-nil, otherwise a shared client with a bounded timeout.
 func clientOrDefault(c *http.Client) *http.Client {
 	if c != nil {
 		return c
 	}
 
-	return http.DefaultClient
+	return defaultHTTPClient
 }
 
 // fetchJSON performs a GET request to baseURL+path and decodes the JSON response
-// into the type parameter T. If client is nil, http.DefaultClient is used.
+// into the type parameter T. If client is nil, the shared default client is used.
 func fetchJSON[T any](ctx context.Context, client *http.Client, baseURL, path string) (T, error) { //nolint:ireturn // generic type parameter
 	var result T
 
@@ -96,7 +101,7 @@ func fetchJSON[T any](ctx context.Context, client *http.Client, baseURL, path st
 
 // httpGetStream performs a GET request and returns the response for streaming
 // reads. The caller must close the response body. If client is nil,
-// http.DefaultClient is used.
+// the shared default client is used.
 func httpGetStream(ctx context.Context, client *http.Client, requestURL string) (*http.Response, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, http.NoBody)
 	if err != nil {

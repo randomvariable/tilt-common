@@ -22,9 +22,11 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -135,6 +137,7 @@ func ExportProfiles(ctx context.Context, parcaURL, outputDir string, client *htt
 	return nil
 }
 
+//nolint:err113 // includes endpoint path details to aid API/protocol troubleshooting.
 func discoverParcaAPI(ctx context.Context, client *http.Client, parcaURL string) (parcaAPI, []string, error) {
 	var errs []string
 
@@ -151,12 +154,13 @@ func discoverParcaAPI(ctx context.Context, client *http.Client, parcaURL string)
 }
 
 // fetchProfileTypes queries Parca for the list of available profile type names.
-func fetchProfileTypes(ctx context.Context, client *http.Client, parcaURL string) ([]string, error) {
-	_, profileTypes, err := discoverParcaAPI(ctx, client, parcaURL)
+func fetchProfileTypes(ctx context.Context, parcaURL string) ([]string, error) {
+	_, profileTypes, err := discoverParcaAPI(ctx, nil, parcaURL)
 
 	return profileTypes, err
 }
 
+//nolint:cyclop,err113 // endpoint probing intentionally branches across protocol variants.
 func fetchProfileTypesWithAPI(ctx context.Context, client *http.Client, parcaURL string, api parcaAPI) ([]string, error) {
 	if api.grpcWeb {
 		payload, err := grpcWebUnary(ctx, clientOrDefault(client), parcaURL, api.profileTypesPath, nil)
@@ -180,7 +184,9 @@ func fetchProfileTypesWithAPI(ctx context.Context, client *http.Client, parcaURL
 	parsedURL.Path = api.profileTypesPath
 
 	method := http.MethodGet
+
 	var reqBody io.Reader = http.NoBody
+
 	if api.profileTypesPOST {
 		method = http.MethodPost
 		reqBody = bytes.NewReader([]byte("{}"))
@@ -193,6 +199,7 @@ func fetchProfileTypesWithAPI(ctx context.Context, client *http.Client, parcaURL
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+
 	if api.connectProtocol {
 		req.Header.Set("Connect-Protocol-Version", "1")
 	}
@@ -227,6 +234,8 @@ func fetchProfileTypesWithAPI(ctx context.Context, client *http.Client, parcaURL
 
 // downloadProfile queries Parca for all samples of a given profile type across
 // the full available time range and saves the pprof binary to profilesDir.
+//
+//nolint:cyclop,err113,funlen // profile download path handles multiple API variants and response shapes.
 func downloadProfile(ctx context.Context, client *http.Client, parcaURL string, api parcaAPI, profileType, profilesDir string) error {
 	now := time.Now().UTC()
 
@@ -284,6 +293,7 @@ func downloadProfile(ctx context.Context, client *http.Client, parcaURL string, 
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+
 	if api.connectProtocol {
 		req.Header.Set("Connect-Protocol-Version", "1")
 	}
@@ -352,8 +362,10 @@ func downloadProfile(ctx context.Context, client *http.Client, parcaURL string, 
 	return nil
 }
 
+//nolint:err113 // returns contextual errors for remote API/debugging clarity.
 func downloadProfileGRPCWeb(ctx context.Context, client *http.Client, parcaURL string, api parcaAPI, profileType string, now time.Time) ([]byte, error) {
 	requestPayload := buildQueryRequestProto(profileType, now)
+
 	responsePayload, err := grpcWebUnary(ctx, client, parcaURL, api.queryPath, requestPayload)
 	if err != nil {
 		return nil, fmt.Errorf("querying profile %q over grpc-web: %w", profileType, err)
@@ -387,7 +399,7 @@ func sanitizeProfileName(profileType string) string {
 func parseProfileTypeNames(body []byte) ([]string, error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding profile types payload: %w", err)
 	}
 
 	for _, key := range []string{"profileTypes", "types", "data"} {
@@ -414,16 +426,19 @@ func parseProfileTypeNames(body []byte) ([]string, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("could not find profile types field in response")
+	return nil, errors.New("could not find profile types field in response") //nolint:err113 // static parser sentinel
 }
 
+//nolint:err113 // parser reports exact wire-format validation failures.
 func parseProfileTypeNamesProto(payload []byte) ([]string, error) {
 	var names []string
+
 	for len(payload) > 0 {
 		num, wireType, n := protowire.ConsumeTag(payload)
 		if n < 0 {
 			return nil, fmt.Errorf("invalid profile types proto tag: %d", n)
 		}
+
 		payload = payload[n:]
 
 		if num != 1 || wireType != protowire.BytesType {
@@ -431,6 +446,7 @@ func parseProfileTypeNamesProto(payload []byte) ([]string, error) {
 			if skip < 0 {
 				return nil, fmt.Errorf("invalid profile types proto field: %d", skip)
 			}
+
 			payload = payload[skip:]
 
 			continue
@@ -440,12 +456,14 @@ func parseProfileTypeNamesProto(payload []byte) ([]string, error) {
 		if m < 0 {
 			return nil, fmt.Errorf("invalid profile type entry: %d", m)
 		}
+
 		payload = payload[m:]
 
 		name, err := parseProfileTypeEntryName(profileTypeMsg)
 		if err != nil {
 			return nil, err
 		}
+
 		if name != "" {
 			names = append(names, name)
 		}
@@ -454,12 +472,14 @@ func parseProfileTypeNamesProto(payload []byte) ([]string, error) {
 	return names, nil
 }
 
+//nolint:err113 // parser reports exact wire-format validation failures.
 func parseProfileTypeEntryName(msg []byte) (string, error) {
 	for len(msg) > 0 {
 		num, wireType, n := protowire.ConsumeTag(msg)
 		if n < 0 {
 			return "", fmt.Errorf("invalid profile type entry tag: %d", n)
 		}
+
 		msg = msg[n:]
 
 		if num == 1 && wireType == protowire.BytesType {
@@ -475,18 +495,21 @@ func parseProfileTypeEntryName(msg []byte) (string, error) {
 		if skip < 0 {
 			return "", fmt.Errorf("invalid profile type field: %d", skip)
 		}
+
 		msg = msg[skip:]
 	}
 
 	return "", nil
 }
 
+//nolint:err113 // parser reports exact wire-format validation failures.
 func parseQueryResponsePprofProto(payload []byte) ([]byte, error) {
 	for len(payload) > 0 {
 		num, wireType, n := protowire.ConsumeTag(payload)
 		if n < 0 {
 			return nil, fmt.Errorf("invalid query response tag: %d", n)
 		}
+
 		payload = payload[n:]
 
 		if num == 6 && wireType == protowire.BytesType {
@@ -502,12 +525,14 @@ func parseQueryResponsePprofProto(payload []byte) ([]byte, error) {
 		if skip < 0 {
 			return nil, fmt.Errorf("invalid query response field: %d", skip)
 		}
+
 		payload = payload[skip:]
 	}
 
-	return nil, fmt.Errorf("pprof field not found in query response")
+	return nil, errors.New("pprof field not found in query response")
 }
 
+//nolint:mnd // protobuf field numbers are wire-level schema values.
 func buildQueryRequestProto(profileType string, now time.Time) []byte {
 	startTimestamp := encodeTimestampProto(time.Unix(0, 0).UTC())
 	endTimestamp := encodeTimestampProto(now.UTC())
@@ -531,26 +556,38 @@ func buildQueryRequestProto(profileType string, now time.Time) []byte {
 	return queryRequest
 }
 
+//nolint:mnd,gosec // protobuf timestamp wire encoding uses fixed field tags and non-negative values.
 func encodeTimestampProto(t time.Time) []byte {
+	if t.Unix() < 0 {
+		t = time.Unix(0, 0).UTC()
+	}
+
 	b := []byte{}
 	b = protowire.AppendTag(b, 1, protowire.VarintType)
 	b = protowire.AppendVarint(b, uint64(t.Unix()))
 	b = protowire.AppendTag(b, 2, protowire.VarintType)
-	b = protowire.AppendVarint(b, uint64(t.Nanosecond()))
+	b = protowire.AppendVarint(b, uint64(int64(t.Nanosecond())))
 
 	return b
 }
 
+//nolint:err113,mnd,gosec // grpc-web framing and detailed errors are intentional.
 func grpcWebUnary(ctx context.Context, client *http.Client, baseURL, path string, requestMessage []byte) ([]byte, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parsing Parca URL: %w", err)
 	}
+
 	parsedURL.Path = path
 
 	framedReq := make([]byte, 0, 5+len(requestMessage))
 	framedReq = append(framedReq, 0x00)
 	lengthPrefix := make([]byte, 4)
+
+	if len(requestMessage) > math.MaxUint32 {
+		return nil, fmt.Errorf("grpc-web request too large: %d bytes", len(requestMessage))
+	}
+
 	binary.BigEndian.PutUint32(lengthPrefix, uint32(len(requestMessage)))
 	framedReq = append(framedReq, lengthPrefix...)
 	framedReq = append(framedReq, requestMessage...)
@@ -595,21 +632,23 @@ func grpcWebUnary(ctx context.Context, client *http.Client, baseURL, path string
 	return msgPayload, nil
 }
 
+//nolint:revive,err113,mnd,gocritic // grpc-web parser needs this return shape and wire constants.
 func parseGRPCWebResponse(body []byte) ([]byte, int, string, error) {
 	var messagePayload []byte
+
 	grpcStatus := 0
 	grpcMessage := ""
 
 	for len(body) > 0 {
 		if len(body) < 5 {
-			return nil, 0, "", fmt.Errorf("invalid grpc-web frame: too short")
+			return nil, 0, "", errors.New("invalid grpc-web frame: too short")
 		}
 
 		frameType := body[0]
 		frameLen := binary.BigEndian.Uint32(body[1:5])
 		body = body[5:]
 
-		if uint32(len(body)) < frameLen {
+		if uint64(len(body)) < uint64(frameLen) {
 			return nil, 0, "", fmt.Errorf("invalid grpc-web frame length: want %d have %d", frameLen, len(body))
 		}
 
@@ -630,12 +669,13 @@ func parseGRPCWebResponse(body []byte) ([]byte, int, string, error) {
 	return messagePayload, grpcStatus, grpcMessage, nil
 }
 
+//nolint:mnd,gocritic // trailer parsing uses fixed delimiter behavior and concise returns.
 func parseGRPCWebTrailer(payload []byte) (int, string) {
 	status := 0
 	message := ""
 
-	lines := strings.Split(string(payload), "\r\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(payload), "\r\n")
+	for line := range lines {
 		if line == "" {
 			continue
 		}
@@ -655,6 +695,7 @@ func parseGRPCWebTrailer(payload []byte) (int, string) {
 			}
 		case "grpc-message":
 			message = value
+		default:
 		}
 	}
 
