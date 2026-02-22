@@ -1,0 +1,28 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# Grafana dashboard provider configuration.
+# Watches /var/lib/grafana/dashboards for dashboard JSON files.
+# This template is used as a base; the Starlark code generates
+# the actual dashboard ConfigMaps dynamically from user-provided paths.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: __NAMESPACE__
+  labels:
+    app: grafana
+    app.kubernetes.io/managed-by: tilt-observability
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: custom
+      folder: Custom
+      type: file
+      options:
+        path: /var/lib/grafana/dashboards
+        foldersFromFilesStructure: false
+      updateIntervalSeconds: 30
+      allowUiUpdates: true

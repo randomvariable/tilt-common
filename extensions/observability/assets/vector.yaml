@@ -1,0 +1,133 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# Vector DaemonSet for container log collection.
+# Collects container logs via Kubernetes API and ships to VictoriaLogs.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vector
+  namespace: __NAMESPACE__
+  labels:
+    app: vector
+    app.kubernetes.io/managed-by: tilt-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tilt-observability-vector
+  labels:
+    app: vector
+    app.kubernetes.io/managed-by: tilt-observability
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - nodes
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tilt-observability-vector
+  labels:
+    app: vector
+    app.kubernetes.io/managed-by: tilt-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tilt-observability-vector
+subjects:
+  - kind: ServiceAccount
+    name: vector
+    namespace: __NAMESPACE__
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vector
+  namespace: __NAMESPACE__
+  labels:
+    app: vector
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  selector:
+    matchLabels:
+      app: vector
+  template:
+    metadata:
+      labels:
+        app: vector
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      serviceAccountName: vector
+      containers:
+        - name: vector
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--config-dir"
+            - "/etc/vector/"
+          env:
+            - name: VECTOR_LOG
+              value: info
+            - name: VECTOR_SELF_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: api
+              containerPort: 8686
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8686
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8686
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vector/
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/vector
+            - name: var-log
+              mountPath: /var/log
+              readOnly: true
+            - name: var-lib-docker
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: vector-config
+        - name: data
+          hostPath:
+            path: /var/lib/vector
+            type: DirectoryOrCreate
+        - name: var-log
+          hostPath:
+            path: /var/log
+            type: Directory
+        - name: var-lib-docker
+          hostPath:
+            path: /var/lib/docker/containers
+            type: DirectoryOrCreate

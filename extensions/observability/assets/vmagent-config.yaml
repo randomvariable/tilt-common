@@ -1,0 +1,59 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# VMAgent scrape configuration for local development.
+# Discovers Kubernetes service endpoints annotated with prometheus.io/* annotations.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vmagent-scrape-config
+  namespace: __NAMESPACE__
+  labels:
+    app: vmagent
+    app.kubernetes.io/managed-by: tilt-observability
+data:
+  scrape.yaml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: kubernetes-service-endpoints
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          # Only scrape targets with prometheus.io/scrape annotation.
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          # Override the scrape port from the prometheus.io/port annotation.
+          - source_labels:
+              - __address__
+              - __meta_kubernetes_service_annotation_prometheus_io_port
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          # Override the metrics path from the prometheus.io/path annotation.
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          # Override the scheme from the prometheus.io/scheme annotation.
+          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+            action: replace
+            target_label: __scheme__
+            regex: (.+)
+          # Add namespace, pod, and service labels so targets discovered from
+          # different services for the same pod have distinct label sets.
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: service
+
+    __STATIC_TARGETS__

@@ -1,9 +1,0 @@
-# Register the nvidia container runtime with containerd.
-# This file is imported by containerd via the conf.d imports mechanism.
-# It enables pods to use RuntimeClass "nvidia" for GPU workloads.
-
-[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-  runtime_type = "io.containerd.runc.v2"
-
-[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-  BinaryName = "/usr/bin/nvidia-container-runtime"

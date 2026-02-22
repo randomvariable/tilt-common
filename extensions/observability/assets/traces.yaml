@@ -1,0 +1,80 @@
+# Copyright 2026 Naadir Jeewa
+# SPDX-License-Identifier: Apache-2.0
+#
+# VictoriaTraces single-node deployment for local development.
+# Provides distributed trace storage with OTLP gRPC and HTTP ingestion.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victoriatraces
+  namespace: __NAMESPACE__
+  labels:
+    app: victoriatraces
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: victoriatraces
+  template:
+    metadata:
+      labels:
+        app: victoriatraces
+        app.kubernetes.io/managed-by: tilt-observability
+    spec:
+      containers:
+        - name: victoriatraces
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          args:
+            - -retentionPeriod=1d
+            - -otlpGRPCListenAddr=:4317
+            - -otlpGRPC.tls=false
+          ports:
+            - name: http
+              containerPort: 10428
+              protocol: TCP
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 10428
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 10428
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: victoriatraces
+  namespace: __NAMESPACE__
+  labels:
+    app: victoriatraces
+    app.kubernetes.io/managed-by: tilt-observability
+spec:
+  selector:
+    app: victoriatraces
+  ports:
+    - name: http
+      port: 10428
+      targetPort: 10428
+      protocol: TCP
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP

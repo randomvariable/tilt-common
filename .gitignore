@@ -49,7 +49,33 @@ kubeconfig*
 test-results/
 coverage/
 
+# Go
+*.exe
+*.out
+*.prof*
+vendor/
+coverage.out
+
+# DuckDB / Observability Export
+
+*.duckdb
+
+# Mage tool binaries
+hack/bin/
+
 # Build Artifacts (if any)
+bin/
 dist/
 build/
 out/
+# Python (Jupyter notebooks)
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+.venv/
+venv/
+.env
+.kind-cluster.yaml
+artifacts
