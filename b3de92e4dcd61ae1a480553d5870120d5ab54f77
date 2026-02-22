@@ -1,0 +1,23 @@
+.github/workflows/ci.yaml
+  c4f079a03b5fa946 28-42,61-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.4",
+  "base_commit_sha": "b3de92e4dcd61ae1a480553d5870120d5ab54f77",
+  "prompts": {
+    "c4f079a03b5fa946": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8d636571-c56a-4bf9-b97a-b460f3b84ad5",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 79,
+      "total_deletions": 22,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    }
+  }
+}
