@@ -1,0 +1,107 @@
+cmd/observability-export/pprof.go
+  9d84833e37ce244b 20,22,24,40,51-52,69-72,75-76,78-87,89-90,96-97,106,153,175-179,181,191-193,195,199-201,203-207,209-210,214-215,225,228-229,263-264,266-277,280-283,285-286,291,293-299,311,313,323-324,326-328,330-332,335,345
+  c4f079a03b5fa946 23,32,35-36,39,41-48,58,62-63,68,73-74,77,88,91-92,95,161-174,183,186,189,211-213,216,220-224,231-259,300-304,307-310,312,314-322,325,329,353-371,385-672
+cmd/observability-export/main_test.go
+  9d84833e37ce244b 23,39-44,998,1004,1007,1083,1089,1234-1236,1523,1543,1793
+  c4f079a03b5fa946 24,37,1144-1227,1265-1412
+cmd/observability-export/traces.go
+  c4f079a03b5fa946 206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.4",
+  "base_commit_sha": "271bf6b00bf36d4cf8e0c966d9a19809015ed9ed",
+  "prompts": {
+    "0cdb327a7f250d4c": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "6fb12075-1ce6-4cd8-8a7b-0301a6d28f11",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "384c86c24e458cc8": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "19f5aecf-6094-4331-ba0d-b9a55a0742ee",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "389d7a06a1978ebb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf227f29-53d7-45e7-9544-1fa59c7acec3",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 351,
+      "total_deletions": 250,
+      "accepted_lines": 341,
+      "overriden_lines": 0
+    },
+    "9d84833e37ce244b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef734e75-0940-4857-b0fb-5a65ad3cb9b0",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 610,
+      "total_deletions": 602,
+      "accepted_lines": 496,
+      "overriden_lines": 5
+    },
+    "bc814fc791044e58": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "bc580813-cb27-40eb-b8fd-c1ac28d37794",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 3,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "c4f079a03b5fa946": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8d636571-c56a-4bf9-b97a-b460f3b84ad5",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 659,
+      "total_deletions": 48,
+      "accepted_lines": 642,
+      "overriden_lines": 1
+    },
+    "d2459ca83e6957f4": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "571a46d4-7615-499a-83b3-3ba3bb1cfd27",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
