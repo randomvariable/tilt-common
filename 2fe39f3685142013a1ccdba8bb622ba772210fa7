@@ -1,0 +1,31 @@
+cmd/observability-export/main_test.go
+  c4f079a03b5fa946 1183
+cmd/observability-export/pprof.go
+  c4f079a03b5fa946 29,140,158,163,238,365,402,429,432,475,505,535,559,561-564,569,574,587-589,635,651,672,698
+cmd/observability-export/portforward.go
+  c4f079a03b5fa946 58
+cmd/observability-export/helpers.go
+  c4f079a03b5fa946 30,46-47,56-58,64,68,104
+.github/workflows/ci.yaml
+  c4f079a03b5fa946 28,47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.4",
+  "base_commit_sha": "2fe39f3685142013a1ccdba8bb622ba772210fa7",
+  "prompts": {
+    "c4f079a03b5fa946": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8d636571-c56a-4bf9-b97a-b460f3b84ad5",
+        "model": "unknown"
+      },
+      "human_author": "Naadir Jeewa <naadir@randomvariable.co.uk>",
+      "messages": [],
+      "total_additions": 49,
+      "total_deletions": 20,
+      "accepted_lines": 39,
+      "overriden_lines": 1
+    }
+  }
+}
